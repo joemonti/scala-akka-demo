@@ -1,19 +1,50 @@
+const styles = {
+  main: {
+  },
+  chats: {
+    border: '1px solid black',
+    padding: '8px',
+    marginTop: '4px'
+  },
+  info: {
+    color: '#888',
+    margin: '4px 6px'
+  },
+  chatFrom: {
+    color: '#0000ff',
+    fontWeight: 'bold',
+    margin: '4px 6px'
+  },
+  chatSelf: {
+    color: '#ff0000',
+    fontWeight: 'bold',
+    margin: '4px 6px'
+  },
+  chatMessage: {
+    margin: '4px 6px'
+  }
+};
+
 class Chat extends React.Component {
   constructor(props) {
     super(props);
     
-    this.ws = new WebSocket('ws://localhost:9000/ws');
+    this.ws = new WebSocket(`ws://${window.location.host}/ws`);
     this.ws.onclose = (event) => {
-        console.log("WS Close %o", event);
+      console.log("WS Close %o", event);
     };
     this.ws.onopen = (event) => {
-        console.log("WS Open %o", event);
+      console.log("WS Open %o", event);
     };
     this.ws.onerror = (event) => {
-        console.error("WS ERROR %o", event);
+      console.error("WS ERROR %o", event);
     };
     this.ws.onmessage = (event) => {
-        console.log("WS Eevent %o", event);
+      console.log("WS Event %o", event);
+      this.setState(prevState => {
+        prevState.chats.splice(0, 0, JSON.parse(event.data));
+        return prevState;
+      });
     };
     
     this.state = {
@@ -22,38 +53,82 @@ class Chat extends React.Component {
       chats: []
     };
     
-    this.handleChange = this.handleChange.bind(this);
     this.handleLogin = this.handleLogin.bind(this);
-  }
-  
-  handleChange(event) {
-    this.setState({username: event.target.value});
+    this.handleSend = this.handleSend.bind(this);
   }
   
   handleLogin(event) { 
     event.preventDefault();
-    console.log("Logging in as " + this.state.username);
-    if (this.state.username == '') return;
+    var username = document.getElementById('login-username').value;
+    console.log("Logging in as " + username);
+    if (username == '') return;
     let obj = {
         command: "login",
-        username: this.state.username
+        username
     };
     this.ws.send(JSON.stringify(obj));
-    this.setState({loggedIn: true});
+    this.setState({username, loggedIn: true});
+  }
+
+  handleSend(event) {
+    event.preventDefault();
+    var message = document.getElementById('chat-send-message').value;
+    if (message == '') return;
+    let obj = {
+        command: "send",
+        message
+    };
+    this.ws.send(JSON.stringify(obj));
+    let selfChat = {
+      event: "send",
+      from: this.state.username,
+      message
+    };
+    this.setState(prevState => {
+      prevState.chats.splice(0, 0, selfChat);
+      return prevState;
+    });
+    document.getElementById('chat-send-message').value = '';
   }
 
   render() {
     if (!this.state.loggedIn) {
-        return (
-            <div>
-                <form onSubmit={this.handleLogin}>
-                    <input type="text" value={this.state.username} onChange={this.handleChange} />
-                    <button type="submit">Login</button>
-                </form>
-            </div>
-        );
+      return (
+        <div style={styles.main}>
+          <form id="login-form" key="login-form" onSubmit={this.handleLogin}>
+            <input type="text" id="login-username" key="login-username" autoComplete="off"/>
+            <button type="submit">Login</button>
+          </form>
+        </div>
+      );
     } else {
-        return (<h1>Logged In as {this.state.username}</h1>);
+      let chats = this.state.chats.map((chat, i) => {
+        if (chat.event == "info") {
+          return (<div style={styles.info} key={i}>{chat.message}</div>);
+        } else if (chat.event == "login") {
+          return (<div style={styles.info} key={i}>{chat.from} logged in</div>);
+        } else if (chat.event == "logout") {
+          return (<div style={styles.info} key={i}>{chat.from} logged out</div>);
+        } else if (chat.event == "send") {
+          var fromStyle = styles.chatFrom;
+          if (chat.from == this.state.username) fromStyle = styles.chatSelf;
+          return (
+            <div style={styles.chat} key={i}>
+              <span style={fromStyle}>{chat.from}: </span>
+              <span style={styles.chatMessage}>{chat.message}</span>
+            </div>
+          );
+        }
+      });
+      return (
+        <div style={styles.main}>
+          <form id="chat-form" key="chat-form" onSubmit={this.handleSend}>
+            <input type="text" id="chat-send-message" key="chat-send-message" autoComplete="off"/>
+            <button type="submit">Send</button>
+          </form>
+          <div style={styles.chats}>{chats}</div>
+        </div>
+      );
     }
   }
 }

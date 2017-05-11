@@ -35,6 +35,7 @@ class HomeController @Inject() (implicit system: ActorSystem, materializer: Mate
 }
 
 case class ChatLogin(username: String)
+case class ChatLogout(username: String)
 case class ChatRegister(username: String, actorRef: ActorRef)
 case class ChatUnregister(username: String)
 case class ChatSend(from: String, message: String)
@@ -54,6 +55,7 @@ class ChatRouter() extends Actor {
     case ChatUnregister(username) => 
       Logger.debug(s"User $username disconnected")
       users.remove(username)
+      users.foreach { _._2 ! ChatLogout(username) }
     case send @ ChatSend(from, message) => 
       Logger.debug(s"User $from sent $message")
       users.filter(_._1 != from).foreach { _._2 ! send }
@@ -80,6 +82,8 @@ class ChatUser(out: ActorRef, router: ActorRef) extends Actor {
       out ! Json.obj("event" -> "send", "from" -> username, "message" -> message)
     case ChatLogin(username) =>
       out ! Json.obj("event" -> "login", "from" -> username)
+    case ChatLogout(username) =>
+      out ! Json.obj("event" -> "logout", "from" -> username)
   }
   
   override def postStop() = {
