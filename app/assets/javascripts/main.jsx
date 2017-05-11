@@ -3,25 +3,25 @@ const styles = {
   },
   chats: {
     border: '1px solid black',
-    padding: '8px',
+    padding: '4px',
     marginTop: '4px'
   },
   info: {
     color: '#888',
-    margin: '4px 6px'
+    margin: '4px 2px'
   },
   chatFrom: {
     color: '#0000ff',
     fontWeight: 'bold',
-    margin: '4px 6px'
+    margin: '4px 2px'
   },
   chatSelf: {
     color: '#ff0000',
     fontWeight: 'bold',
-    margin: '4px 6px'
+    margin: '4px 2px'
   },
   chatMessage: {
-    margin: '4px 6px'
+    margin: '4px 2px'
   }
 };
 
@@ -67,7 +67,16 @@ class Chat extends React.Component {
         username
     };
     this.ws.send(JSON.stringify(obj));
-    this.setState({username, loggedIn: true});
+    let selfChat = {
+      event: "info",
+      message: "You logged in as " + username
+    };
+    this.setState(prevState => {
+      prevState.username = username;
+      prevState.loggedIn = true;
+      prevState.chats.splice(0, 0, selfChat);
+      return prevState;
+    });
   }
 
   handleSend(event) {
