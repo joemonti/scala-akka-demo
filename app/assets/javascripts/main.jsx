@@ -29,7 +29,8 @@ class Chat extends React.Component {
   constructor(props) {
     super(props);
     
-    this.ws = new WebSocket(`ws://${window.location.host}/ws`);
+    let wsProto = (window.location.protocol == 'https:' ? 'wss' : 'ws');
+    this.ws = new WebSocket(`${wsProto}://${window.location.host}/ws`);
     this.ws.onclose = (event) => {
       console.log("WS Close %o", event);
     };
